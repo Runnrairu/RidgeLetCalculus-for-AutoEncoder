@@ -4,10 +4,21 @@ Created on Tue Sep  4 04:02:11 2018
 
 @author: 宮本来夏
 """
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Sep  4 04:02:11 2018
+
+@author: 宮本来夏
+"""
 from tensorflow.examples.tutorials.mnist import input_data
 import tensorflow as tf
 import numpy as np
 import mine
+
+def double_class(y):
+    b = tf.squeeze( tf.slice( y , [0,0] , [-1,1] ) )
+    return tf.where( tf.greater( b , 0.5 ) , tf.ones_like(b), tf.zeros_like(b))
+
 
 mnist = input_data.read_data_sets("MNIST_data/", one_hot=True)
 
@@ -26,7 +37,7 @@ b2 = tf.Variable(tf.zeros([m]))
 y2 = tf.nn.relu(tf.matmul(y1,W2) + b2)
 W3 = tf.Variable(tf.random_normal([m,1],stddev=0.1))
 b3 = tf.Variable(tf.random_normal([1]))
-y = mine.double_class(tf.nn.sigmoid(tf.matmul(y2,W3) + b3))
+y = tf.nn.sigmoid(tf.matmul(y2,W3) + b3)
 
 
 
@@ -63,27 +74,26 @@ y2_o = tf.nn.relu(tf.add(tf.matmul(y1_o,W2_o) , b2_o))
 W3_o = tf.Variable(tf.random_normal([m,1],stddev=0.3))
 b3_o = tf.Variable(tf.random_normal([1]))
 
-y_o = mine.double_class(tf.nn.sigmoid(tf.add(tf.matmul(y2_o,W3_o) ,b3_o)),55000)
-
+y_o = tf.nn.sigmoid(tf.add(tf.matmul(y2_o,W3_o) ,b3_o))
 
 
 
 
 y_ = tf.placeholder("float", [None,1])
-cross_entropy = -tf.reduce_sum(y_*tf.log(y))
+cross_entropy = -tf.reduce_sum(y_*tf.log(y)+(tf.ones_like(y_)-y_)*tf.log(tf.ones_like(y)-y))
 train_step = tf.train.GradientDescentOptimizer(0.01).minimize(cross_entropy,var_list=[W,b,W2,b2,W3,b3])
 
-cross_entropy_o = -tf.reduce_sum(y_*tf.log(y_o))
+cross_entropy_o = -tf.reduce_sum(y_*tf.log(y_o)+(tf.ones_like(y_)-y_)*tf.log(tf.ones_like(y_o)-y_o))
 train_step_o = tf.train.GradientDescentOptimizer(0.01).minimize(cross_entropy_o,var_list=[W_o,b_o,W2_o,b2_o,W3_o,b3_o])
-correct_prediction = tf.equal(tf.argmax(y,1), tf.argmax(y_,1))
+correct_prediction = tf.equal(double_class(y), double_class(y_))
 accuracy = tf.reduce_mean(tf.cast(correct_prediction, "float"))
 
-correct_prediction_o = tf.equal(tf.argmax(y_o,1), tf.argmax(y_,1))
+correct_prediction_o = tf.equal(double_class(y_o), double_class(y_))
 accuracy_o = tf.reduce_mean(tf.cast(correct_prediction_o, "float"))
 
 
 
-init = tf.initialize_all_variables()
+init = tf.global_variables_initializer()
 sess = tf.Session()
 sess.run(init)
 print (sess.run(accuracy, feed_dict={x: batch_x, y_: batch_y_train_logi}))
